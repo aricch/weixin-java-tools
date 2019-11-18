@@ -2,35 +2,40 @@ package me.chanjar.weixin.cp.api.impl;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
-import me.chanjar.weixin.common.exception.WxErrorException;
+import lombok.RequiredArgsConstructor;
+import me.chanjar.weixin.common.error.WxErrorException;
 import me.chanjar.weixin.cp.api.WxCpService;
 import me.chanjar.weixin.cp.api.WxCpTagService;
 import me.chanjar.weixin.cp.bean.WxCpTag;
 import me.chanjar.weixin.cp.bean.WxCpTagAddOrRemoveUsersResult;
+import me.chanjar.weixin.cp.bean.WxCpTagGetResult;
 import me.chanjar.weixin.cp.bean.WxCpUser;
+import me.chanjar.weixin.cp.constant.WxCpApiPathConsts;
 import me.chanjar.weixin.cp.util.json.WxCpGsonBuilder;
 
 import java.util.List;
 
+import static me.chanjar.weixin.cp.constant.WxCpApiPathConsts.Tag.*;
+import static me.chanjar.weixin.cp.constant.WxCpApiPathConsts.Tag.TAG_CREATE;
+import static me.chanjar.weixin.cp.constant.WxCpApiPathConsts.Tag.TAG_UPDATE;
+
 /**
  * <pre>
- *  标签管理接口
+ *  标签管理接口.
  * Created by Binary Wang on 2017-6-25.
- * @author <a href="https://github.com/binarywang">Binary Wang</a>
  * </pre>
+ *
+ * @author <a href="https://github.com/binarywang">Binary Wang</a>
  */
+@RequiredArgsConstructor
 public class WxCpTagServiceImpl implements WxCpTagService {
-  private WxCpService mainService;
-
-  public WxCpTagServiceImpl(WxCpService mainService) {
-    this.mainService = mainService;
-  }
+  private final WxCpService mainService;
 
   @Override
   public String create(String tagName) throws WxErrorException {
-    String url = "https://qyapi.weixin.qq.com/cgi-bin/tag/create";
     JsonObject o = new JsonObject();
     o.addProperty("tagname", tagName);
+    String url = this.mainService.getWxCpConfigStorage().getApiUrl(TAG_CREATE);
     String responseContent = this.mainService.post(url, o.toString());
     JsonElement tmpJsonElement = new JsonParser().parse(responseContent);
     return tmpJsonElement.getAsJsonObject().get("tagid").getAsString();
@@ -38,7 +43,7 @@ public class WxCpTagServiceImpl implements WxCpTagService {
 
   @Override
   public void update(String tagId, String tagName) throws WxErrorException {
-    String url = "https://qyapi.weixin.qq.com/cgi-bin/tag/update";
+    String url = this.mainService.getWxCpConfigStorage().getApiUrl(TAG_UPDATE);
     JsonObject o = new JsonObject();
     o.addProperty("tagid", tagId);
     o.addProperty("tagname", tagName);
@@ -47,16 +52,16 @@ public class WxCpTagServiceImpl implements WxCpTagService {
 
   @Override
   public void delete(String tagId) throws WxErrorException {
-    String url = "https://qyapi.weixin.qq.com/cgi-bin/tag/delete?tagid=" + tagId;
+    String url = String.format(this.mainService.getWxCpConfigStorage().getApiUrl(TAG_DELETE), tagId);
     this.mainService.get(url, null);
   }
 
   @Override
   public List<WxCpTag> listAll() throws WxErrorException {
-    String url = "https://qyapi.weixin.qq.com/cgi-bin/tag/list";
+    String url = this.mainService.getWxCpConfigStorage().getApiUrl(TAG_LIST);
     String responseContent = this.mainService.get(url, null);
     JsonElement tmpJsonElement = new JsonParser().parse(responseContent);
-    return WxCpGsonBuilder.INSTANCE.create()
+    return WxCpGsonBuilder.create()
       .fromJson(
         tmpJsonElement.getAsJsonObject().get("taglist"),
         new TypeToken<List<WxCpTag>>() {
@@ -66,10 +71,10 @@ public class WxCpTagServiceImpl implements WxCpTagService {
 
   @Override
   public List<WxCpUser> listUsersByTagId(String tagId) throws WxErrorException {
-    String url = "https://qyapi.weixin.qq.com/cgi-bin/tag/get?tagid=" + tagId;
+    String url = String.format(this.mainService.getWxCpConfigStorage().getApiUrl(TAG_GET), tagId);
     String responseContent = this.mainService.get(url, null);
     JsonElement tmpJsonElement = new JsonParser().parse(responseContent);
-    return WxCpGsonBuilder.INSTANCE.create()
+    return WxCpGsonBuilder.create()
       .fromJson(
         tmpJsonElement.getAsJsonObject().get("userlist"),
         new TypeToken<List<WxCpUser>>() {
@@ -79,9 +84,25 @@ public class WxCpTagServiceImpl implements WxCpTagService {
 
   @Override
   public WxCpTagAddOrRemoveUsersResult addUsers2Tag(String tagId, List<String> userIds, List<String> partyIds) throws WxErrorException {
-    String url = "https://qyapi.weixin.qq.com/cgi-bin/tag/addtagusers";
+    String url = this.mainService.getWxCpConfigStorage().getApiUrl(TAG_ADD_TAG_USERS);
     JsonObject jsonObject = new JsonObject();
     jsonObject.addProperty("tagid", tagId);
+    this.addUserIdsAndPartyIdsToJson(userIds, partyIds, jsonObject);
+
+    return WxCpTagAddOrRemoveUsersResult.fromJson(this.mainService.post(url, jsonObject.toString()));
+  }
+
+  @Override
+  public WxCpTagAddOrRemoveUsersResult removeUsersFromTag(String tagId, List<String> userIds, List<String> partyIds) throws WxErrorException {
+    String url = this.mainService.getWxCpConfigStorage().getApiUrl(TAG_DEL_TAG_USERS);
+    JsonObject jsonObject = new JsonObject();
+    jsonObject.addProperty("tagid", tagId);
+    this.addUserIdsAndPartyIdsToJson(userIds, partyIds, jsonObject);
+
+    return WxCpTagAddOrRemoveUsersResult.fromJson(this.mainService.post(url, jsonObject.toString()));
+  }
+
+  private void addUserIdsAndPartyIdsToJson(List<String> userIds, List<String> partyIds, JsonObject jsonObject) {
     if (userIds != null) {
       JsonArray jsonArray = new JsonArray();
       for (String userId : userIds) {
@@ -89,6 +110,7 @@ public class WxCpTagServiceImpl implements WxCpTagService {
       }
       jsonObject.add("userlist", jsonArray);
     }
+
     if (partyIds != null) {
       JsonArray jsonArray = new JsonArray();
       for (String userId : partyIds) {
@@ -96,21 +118,16 @@ public class WxCpTagServiceImpl implements WxCpTagService {
       }
       jsonObject.add("partylist", jsonArray);
     }
-
-    return WxCpTagAddOrRemoveUsersResult.fromJson(this.mainService.post(url, jsonObject.toString()));
   }
 
   @Override
-  public WxCpTagAddOrRemoveUsersResult removeUsersFromTag(String tagId, List<String> userIds) throws WxErrorException {
-    String url = "https://qyapi.weixin.qq.com/cgi-bin/tag/deltagusers";
-    JsonObject jsonObject = new JsonObject();
-    jsonObject.addProperty("tagid", tagId);
-    JsonArray jsonArray = new JsonArray();
-    for (String userId : userIds) {
-      jsonArray.add(new JsonPrimitive(userId));
+  public WxCpTagGetResult get(String tagId) throws WxErrorException {
+    if (tagId == null) {
+      throw new IllegalArgumentException("缺少tagId参数");
     }
-    jsonObject.add("userlist", jsonArray);
 
-    return WxCpTagAddOrRemoveUsersResult.fromJson(this.mainService.post(url, jsonObject.toString()));
+    String url = String.format(this.mainService.getWxCpConfigStorage().getApiUrl(TAG_GET), tagId);
+    String responseContent = this.mainService.get(url, null);
+    return WxCpTagGetResult.fromJson(responseContent);
   }
 }

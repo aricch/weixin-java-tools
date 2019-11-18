@@ -1,21 +1,26 @@
 package com.github.binarywang.wxpay.bean.notify;
 
 import com.github.binarywang.wxpay.bean.result.BaseWxPayResult;
+import com.github.binarywang.wxpay.constant.WxPayConstants;
 import com.github.binarywang.wxpay.converter.WxPayOrderNotifyResultConverter;
+import com.github.binarywang.wxpay.exception.WxPayException;
+import com.github.binarywang.wxpay.service.WxPayService;
 import com.github.binarywang.wxpay.util.SignUtils;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import me.chanjar.weixin.common.util.ToStringUtils;
+import me.chanjar.weixin.common.util.json.WxGsonBuilder;
 import me.chanjar.weixin.common.util.xml.XStreamInitializer;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * 支付结果通用通知 ，文档见：https://pay.weixin.qq.com/wiki/doc/api/jsapi.php?chapter=9_7
+ * 支付结果通知.
+ * 文档见：https://pay.weixin.qq.com/wiki/doc/api/jsapi.php?chapter=9_7&index=8
+ * https://pay.weixin.qq.com/wiki/doc/api/external/native.php?chapter=9_7
  *
  * @author aimilin6688
  * @since 2.5.0
@@ -271,6 +276,46 @@ public class WxPayOrderNotifyResult extends BaseWxPayResult {
   @XStreamAlias("time_end")
   private String timeEnd;
 
+  /**
+   * <pre>
+   * 字段名：接口版本号.
+   * 变量名：version
+   * 类型：String(32)
+   * 示例值：1.0
+   * 更多信息，详见文档：https://pay.weixin.qq.com/wiki/doc/api/danpin.php?chapter=9_101&index=1
+   * </pre>
+   */
+  @XStreamAlias("version")
+  private String version;
+
+  /**
+   * <pre>
+   * 字段名：汇率.
+   * 变量名：rate_value
+   * 类型：String(16)
+   * 示例值：650000000
+   * 标价币种与支付币种的兑换比例乘以10的8次方即为此值，例如美元兑换人民币的比例为6.5，则rate_value=650000000
+   * </pre>
+   */
+  @XStreamAlias("rate_value")
+  private String rateValue;
+
+  @Override
+  public void checkResult(WxPayService wxPayService, String signType, boolean checkSuccess) throws WxPayException {
+    //防止伪造成功通知
+    if (WxPayConstants.ResultCode.SUCCESS.equals(getReturnCode()) && getSign() == null) {
+      throw new WxPayException("伪造的通知！");
+    }
+
+    super.checkResult(wxPayService, signType, checkSuccess);
+  }
+
+  /**
+   * From xml wx pay order notify result.
+   *
+   * @param xmlString the xml string
+   * @return the wx pay order notify result
+   */
   public static WxPayOrderNotifyResult fromXML(String xmlString) {
     XStream xstream = XStreamInitializer.getInstance();
     xstream.processAnnotations(WxPayOrderNotifyResult.class);
@@ -294,6 +339,6 @@ public class WxPayOrderNotifyResult extends BaseWxPayResult {
 
   @Override
   public String toString() {
-    return ToStringUtils.toSimpleString(this);
+    return WxGsonBuilder.create().toJson(this);
   }
 }

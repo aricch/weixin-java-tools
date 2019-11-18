@@ -1,11 +1,19 @@
 package me.chanjar.weixin.mp.api;
 
-import me.chanjar.weixin.common.bean.result.WxMediaUploadResult;
-import me.chanjar.weixin.common.exception.WxErrorException;
-import me.chanjar.weixin.mp.bean.material.*;
-
 import java.io.File;
 import java.io.InputStream;
+
+import me.chanjar.weixin.common.bean.result.WxMediaUploadResult;
+import me.chanjar.weixin.common.error.WxErrorException;
+import me.chanjar.weixin.mp.bean.material.WxMediaImgUploadResult;
+import me.chanjar.weixin.mp.bean.material.WxMpMaterial;
+import me.chanjar.weixin.mp.bean.material.WxMpMaterialArticleUpdate;
+import me.chanjar.weixin.mp.bean.material.WxMpMaterialCountResult;
+import me.chanjar.weixin.mp.bean.material.WxMpMaterialFileBatchGetResult;
+import me.chanjar.weixin.mp.bean.material.WxMpMaterialNews;
+import me.chanjar.weixin.mp.bean.material.WxMpMaterialNewsBatchGetResult;
+import me.chanjar.weixin.mp.bean.material.WxMpMaterialUploadResult;
+import me.chanjar.weixin.mp.bean.material.WxMpMaterialVideoInfoResult;
 
 /**
  * <pre>
@@ -14,19 +22,10 @@ import java.io.InputStream;
  * 即以https://api.weixin.qq.com/cgi-bin/material
  * 和 https://api.weixin.qq.com/cgi-bin/media开头的接口
  * </pre>
+ *
+ * @author Binary Wang
  */
 public interface WxMpMaterialService {
-  String MEDIA_GET_URL = "https://api.weixin.qq.com/cgi-bin/media/get";
-  String MEDIA_UPLOAD_URL = "https://api.weixin.qq.com/cgi-bin/media/upload?type=%s";
-  String IMG_UPLOAD_URL = "https://api.weixin.qq.com/cgi-bin/media/uploadimg";
-  String MATERIAL_ADD_URL = "https://api.weixin.qq.com/cgi-bin/material/add_material?type=%s";
-  String NEWS_ADD_URL = "https://api.weixin.qq.com/cgi-bin/material/add_news";
-  String MATERIAL_GET_URL = "https://api.weixin.qq.com/cgi-bin/material/get_material";
-  String NEWS_UPDATE_URL = "https://api.weixin.qq.com/cgi-bin/material/update_news";
-  String MATERIAL_DEL_URL = "https://api.weixin.qq.com/cgi-bin/material/del_material";
-  String MATERIAL_GET_COUNT_URL = "https://api.weixin.qq.com/cgi-bin/material/get_materialcount";
-  String MATERIAL_BATCHGET_URL = "https://api.weixin.qq.com/cgi-bin/material/batchget_material";
-
   /**
    * <pre>
    * 新增临时素材
